@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Home,
   Calendar,
@@ -36,6 +36,24 @@ export function CollapsibleSidebar({
 }: CollapsibleSidebarProps) {
   // Estado para controlar si el sidebar está expandido o contraído
   const [isExpanded, setIsExpanded] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detectar si es móvil y ajustar el estado inicial
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      // En móvil, el sidebar debe estar colapsado por defecto
+      if (mobile) {
+        setIsExpanded(false)
+      }
+    }
+
+    // Ejecutar al montar y cuando cambie el tamaño de la ventana
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   // Función para alternar el estado del sidebar
   const toggleSidebar = () => {
@@ -92,10 +110,12 @@ export function CollapsibleSidebar({
 
   return (
     <div
-      className={`bg-white shadow-lg border-r transition-all duration-300 ease-in-out ${isExpanded ? "w-64" : "w-16"}`}
+      className={`bg-white shadow-lg border-r transition-all duration-300 ease-in-out flex flex-col h-screen ${
+        isExpanded ? "w-64" : "w-16"
+      }`}
     >
       {/* Header del sidebar con logo y botón de colapso */}
-      <div className="p-4 border-b">
+      <div className="p-4 border-b flex-shrink-0">
         <div className="flex items-center justify-between">
           {/* Logo y título (solo visible cuando está expandido) */}
           {isExpanded && (
@@ -124,8 +144,8 @@ export function CollapsibleSidebar({
         </div>
       </div>
 
-      {/* Navegación del menú */}
-      <nav className="p-4">
+      {/* Navegación del menú - con flex-1 para ocupar el espacio disponible */}
+      <nav className="p-4 flex-1 overflow-y-auto">
         <div className="space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon
@@ -146,78 +166,79 @@ export function CollapsibleSidebar({
             )
           })}
         </div>
-      </nav>
 
-      {/* Resumen del día - Solo visible cuando está expandido */}
-      {isExpanded && (
-        <div className="p-4 border-t">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Coffee className="w-4 h-4" />
-                Resumen del Día
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Estadísticas rápidas */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="text-center p-2 bg-green-50 rounded text-xs">
-                  <div className="text-lg font-bold text-green-600">{todayCheckIns.length}</div>
-                  <div className="text-green-700">Check-ins</div>
-                </div>
-                <div className="text-center p-2 bg-blue-50 rounded text-xs">
-                  <div className="text-lg font-bold text-blue-600">{todayCheckOuts.length}</div>
-                  <div className="text-blue-700">Check-outs</div>
-                </div>
-                <div className="text-center p-2 bg-orange-50 rounded text-xs">
-                  <div className="text-lg font-bold text-orange-600">{tomorrowCheckIns.length}</div>
-                  <div className="text-orange-700">Mañana</div>
-                </div>
-              </div>
-
-              {/* Lista de check-ins de hoy */}
-              {todayCheckIns.length > 0 && (
-                <div>
-                  <h4 className="text-xs font-medium mb-2 flex items-center gap-1">
-                    <Bell className="w-3 h-3" />
-                    Check-ins Hoy
-                  </h4>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {todayCheckIns.slice(0, 3).map((reservation) => (
-                      <div
-                        key={reservation.id}
-                        className="flex items-center justify-between p-1 bg-gray-50 rounded text-xs"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{reservation.guest}</div>
-                          <div className="text-gray-600 flex items-center gap-1 truncate">
-                            <MapPin className="w-2 h-2 flex-shrink-0" />
-                            {reservation.cabin}
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onQuickAction("call", reservation)}
-                          className="text-xs h-6 w-6 p-0 flex-shrink-0 ml-1"
-                          title="Llamar"
-                        >
-                          <Phone className="w-2 h-2" />
-                        </Button>
-                      </div>
-                    ))}
-                    {todayCheckIns.length > 3 && (
-                      <div className="text-xs text-gray-500 text-center">+{todayCheckIns.length - 3} más</div>
-                    )}
+        {/* Resumen del día - Solo visible cuando está expandido */}
+        {isExpanded && (
+          <div className="mt-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Coffee className="w-4 h-4" />
+                  Resumen del Día
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Estadísticas rápidas */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center p-2 bg-green-50 rounded text-xs">
+                    <div className="text-lg font-bold text-green-600">{todayCheckIns.length}</div>
+                    <div className="text-green-700">Check-ins</div>
+                  </div>
+                  <div className="text-center p-2 bg-blue-50 rounded text-xs">
+                    <div className="text-lg font-bold text-blue-600">{todayCheckOuts.length}</div>
+                    <div className="text-blue-700">Check-outs</div>
+                  </div>
+                  <div className="text-center p-2 bg-orange-50 rounded text-xs">
+                    <div className="text-lg font-bold text-orange-600">{tomorrowCheckIns.length}</div>
+                    <div className="text-orange-700">Mañana</div>
                   </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-      {/* Botón de logout - Siempre visible en la parte inferior */}
-      <div className="p-4 border-t mt-auto">
+
+                {/* Lista de check-ins de hoy */}
+                {todayCheckIns.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium mb-2 flex items-center gap-1">
+                      <Bell className="w-3 h-3" />
+                      Check-ins Hoy
+                    </h4>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {todayCheckIns.slice(0, 3).map((reservation) => (
+                        <div
+                          key={reservation.id}
+                          className="flex items-center justify-between p-1 bg-gray-50 rounded text-xs"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{reservation.guest}</div>
+                            <div className="text-gray-600 flex items-center gap-1 truncate">
+                              <MapPin className="w-2 h-2 flex-shrink-0" />
+                              {reservation.cabin}
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onQuickAction("call", reservation)}
+                            className="text-xs h-6 w-6 p-0 flex-shrink-0 ml-1"
+                            title="Llamar"
+                          >
+                            <Phone className="w-2 h-2" />
+                          </Button>
+                        </div>
+                      ))}
+                      {todayCheckIns.length > 3 && (
+                        <div className="text-xs text-gray-500 text-center">+{todayCheckIns.length - 3} más</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </nav>
+
+      {/* Botón de logout - Siempre visible en la parte inferior con flex-shrink-0 */}
+      <div className="p-4 border-t flex-shrink-0">
         <Button
           variant="ghost"
           onClick={onLogout}

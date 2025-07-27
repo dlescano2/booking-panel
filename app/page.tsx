@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { CalendarDays, Home, Users, AlertTriangle, Calendar, Table, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -18,7 +18,7 @@ import { DateTimeHeader } from "@/components/date-time-header"
 import { LoginForm } from "@/components/login-form"
 
 // Configuración de las 20 cabañas del complejo
-const cabins = [
+const initialCabins = [
   { id: 1, name: "Cabaña del Bosque", capacity: 6, amenities: ["WiFi", "Cocina", "Chimenea"] },
   { id: 2, name: "Cabaña del Lago", capacity: 4, amenities: ["WiFi", "Cocina", "Vista al lago"] },
   { id: 3, name: "Cabaña de la Montaña", capacity: 8, amenities: ["WiFi", "Cocina", "Jacuzzi", "Parrilla"] },
@@ -340,6 +340,19 @@ export default function Dashboard() {
   const [selectedReservation, setSelectedReservation] = useState<any>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [cabins, setCabins] = useState(initialCabins)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Detectar si es móvil
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    return () => window.removeEventListener("resize", checkMobile)
+  }, [])
 
   // Estados para filtros y búsqueda
   const [searchTerm, setSearchTerm] = useState("")
@@ -493,10 +506,27 @@ export default function Dashboard() {
     }
   }
 
+  /**
+   * Actualiza una cabaña existente
+   */
+  const handleUpdateCabin = (updatedCabin: any) => {
+    setCabins((prev) => prev.map((cabin) => (cabin.id === updatedCabin.id ? updatedCabin : cabin)))
+  }
+
+  /**
+   * Crea una nueva cabaña
+   */
+  const handleCreateCabin = (newCabin: any) => {
+    const id = Math.max(...cabins.map((c) => c.id)) + 1
+    setCabins((prev) => [...prev, { ...newCabin, id }])
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 flex-col">
-      {/* Header superior con fecha y hora */}
-      <DateTimeHeader />
+      {/* Header superior con fecha y hora - Oculto en móvil */}
+      <div className="hidden md:block">
+        <DateTimeHeader />
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar colapsible con resumen del día */}
@@ -510,8 +540,8 @@ export default function Dashboard() {
 
         {/* Contenido principal */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header del contenido */}
-          <header className="bg-white shadow-sm border-b px-6 py-4">
+          {/* Header del contenido - Oculto en móvil */}
+          <header className="hidden md:block bg-white shadow-sm border-b px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Panel de Control - Complejo de Cabañas</h1>
@@ -538,51 +568,7 @@ export default function Dashboard() {
                 {activeSection === "dashboard" && (
                   <>
                     {/* Tarjetas de estadísticas - MÁS COMPACTAS */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                      <Card className="p-2">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-                          <CardTitle className="text-xs font-medium">Total Reservas</CardTitle>
-                          <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <div className="text-lg font-bold">{stats.totalReservations}</div>
-                          <p className="text-xs text-muted-foreground">Este mes</p>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="p-2">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-                          <CardTitle className="text-xs font-medium">Confirmadas</CardTitle>
-                          <Users className="h-3 w-3 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <div className="text-lg font-bold text-green-600">{stats.confirmedReservations}</div>
-                          <p className="text-xs text-muted-foreground">Reservas activas</p>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="p-2">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-                          <CardTitle className="text-xs font-medium">Pendientes</CardTitle>
-                          <AlertTriangle className="h-3 w-3 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <div className="text-lg font-bold text-yellow-600">{stats.pendingReservations}</div>
-                          <p className="text-xs text-muted-foreground">Requieren atención</p>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="p-2">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-                          <CardTitle className="text-xs font-medium">Ocupación</CardTitle>
-                          <Home className="h-3 w-3 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <div className="text-lg font-bold">{stats.occupancyRate}%</div>
-                          <p className="text-xs text-muted-foreground">Promedio semanal</p>
-                        </CardContent>
-                      </Card>
-                    </div>
+                    
 
                     {/* Panel de filtros y búsqueda */}
                     <FiltersAndSearch
@@ -719,7 +705,14 @@ export default function Dashboard() {
                   </Tabs>
                 )}
 
-                {activeSection === "cabins" && <CabinsSection cabins={cabins} reservations={reservations} />}
+                {activeSection === "cabins" && (
+                  <CabinsSection
+                    cabins={cabins}
+                    reservations={reservations}
+                    onUpdateCabin={handleUpdateCabin}
+                    onCreateCabin={handleCreateCabin}
+                  />
+                )}
                 {activeSection === "guests" && <GuestsSection reservations={reservations} />}
                 {activeSection === "reports" && <ReportsSection reservations={reservations} cabins={cabins} />}
                 {activeSection === "settings" && <SettingsSection />}
@@ -728,6 +721,16 @@ export default function Dashboard() {
           </main>
         </div>
       </div>
+
+      {/* Botón flotante de Nueva Reserva en móvil */}
+      {isMobile && (
+        <Button
+          onClick={() => setIsNewReservationModalOpen(true)}
+          className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-lg"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      )}
 
       {/* Modales */}
       <ReservationModal

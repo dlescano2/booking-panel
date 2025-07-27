@@ -1,212 +1,238 @@
 "use client"
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Home, Users, Wifi, ChefHat, Flame, MapPin, Calendar, Phone, Eye } from "lucide-react"
-
-interface Cabin {
-  id: number
-  name: string
-  capacity: number
-  amenities: string[]
-}
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Users, Calendar, Eye } from "lucide-react"
 
 interface CabinDetailsModalProps {
   isOpen: boolean
   onClose: () => void
-  cabin: Cabin | null
+  cabin: any
   reservations: any[]
-  onViewReservation: (reservation: any) => void
+  onViewReservationDetails?: (reservation: any) => void
 }
 
-export function CabinDetailsModal({ isOpen, onClose, cabin, reservations, onViewReservation }: CabinDetailsModalProps) {
+export function CabinDetailsModal({
+  isOpen,
+  onClose,
+  cabin,
+  reservations,
+  onViewReservationDetails,
+}: CabinDetailsModalProps) {
   if (!cabin) return null
 
-  const getAmenityIcon = (amenity: string) => {
-    switch (amenity.toLowerCase()) {
-      case "wifi":
-        return <Wifi className="w-4 h-4" />
-      case "cocina":
-        return <ChefHat className="w-4 h-4" />
-      case "chimenea":
-        return <Flame className="w-4 h-4" />
-      default:
-        return <MapPin className="w-4 h-4" />
-    }
-  }
+  // Calcular estadísticas
+  const confirmedReservations = reservations.filter((r) => r.status === "confirmada").length
+  const pendingReservations = reservations.filter((r) => r.status === "pendiente").length
+  const occupancyRate = reservations.length > 0 ? Math.round((confirmedReservations / reservations.length) * 100) : 0
 
-  const cabinReservations = reservations.filter((r) => r.cabin === cabin.name)
-  const activeReservations = cabinReservations.filter((r) => r.status === "confirmada")
-  const pendingReservations = cabinReservations.filter((r) => r.status === "pendiente")
+  // Calcular ingresos totales
+  const totalRevenue = reservations
+    .filter((r) => r.status === "confirmada")
+    .reduce((sum, r) => {
+      const nights = Math.ceil((new Date(r.checkOut).getTime() - new Date(r.checkIn).getTime()) / (1000 * 60 * 60 * 24))
+      return sum + nights * r.pricePerNight
+    }, 0)
 
+  // Ordenar reservas por fecha de check-in (más recientes primero)
+  const sortedReservations = [...reservations].sort(
+    (a, b) => new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime(),
+  )
+
+  // Formatear fecha
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "2-digit",
+    const date = new Date(dateString)
+    return date.toLocaleDateString("es-UY", {
+      day: "numeric",
+      month: "short",
       year: "numeric",
     })
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "confirmada":
-        return <Badge className="bg-green-100 text-green-800">Confirmada</Badge>
-      case "pendiente":
-        return <Badge className="bg-yellow-100 text-yellow-800">Pendiente</Badge>
-      case "cancelada":
-        return <Badge variant="destructive">Cancelada</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Home className="w-5 h-5" />
-            {cabin.name}
-          </DialogTitle>
-          <DialogDescription>Información detallada de la cabaña y sus reservas</DialogDescription>
+          <DialogTitle className="text-2xl">{cabin.name}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Información básica de la cabaña */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Información General</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Capacidad</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-gray-700">Capacidad Máxima</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Users className="w-4 h-4 text-gray-400" />
-                    <span className="font-semibold">{cabin.capacity} huéspedes</span>
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-medium text-gray-700">Total Reservas</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="font-semibold">{cabinReservations.length} reservas</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-700 mb-2">Comodidades</h4>
-                <div className="flex flex-wrap gap-2">
-                  {cabin.amenities.map((amenity, index) => (
-                    <div key={index} className="flex items-center gap-1 text-sm bg-blue-50 px-3 py-1 rounded-full">
-                      {getAmenityIcon(amenity)}
-                      {amenity}
-                    </div>
-                  ))}
-                </div>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-bold flex items-center">
+                <Users className="mr-2 h-5 w-5 text-muted-foreground" />
+                {cabin.capacity} personas
               </div>
             </CardContent>
           </Card>
 
-          {/* Estadísticas de ocupación */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Reservas Confirmadas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{activeReservations.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Reservas Pendientes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-600">{pendingReservations.length}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Tasa de Ocupación</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {cabinReservations.length > 0
-                    ? Math.round((activeReservations.length / cabinReservations.length) * 100)
-                    : 0}
-                  %
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Ocupación</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-bold flex items-center">
+                <Calendar className="mr-2 h-5 w-5 text-muted-foreground" />
+                {occupancyRate}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {confirmedReservations} confirmadas, {pendingReservations} pendientes
+              </p>
+            </CardContent>
+          </Card>
 
-          {/* Lista de reservas */}
-          {cabinReservations.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Reservas de esta Cabaña</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {cabinReservations
-                    .sort((a, b) => new Date(a.checkIn).getTime() - new Date(b.checkIn).getTime())
-                    .map((reservation) => (
-                      <div
-                        key={reservation.id}
-                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium">{reservation.guest}</span>
-                            {getStatusBadge(reservation.status)}
-                          </div>
-                          <div className="text-sm text-gray-600 flex items-center gap-4">
-                            <span>
-                              {formatDate(reservation.checkIn)} - {formatDate(reservation.checkOut)}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3 h-3" />
-                              {reservation.guests} huéspedes
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {reservation.phone}
-                            </span>
-                          </div>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onViewReservation(reservation)}
-                          className="ml-2"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Ver
-                        </Button>
-                      </div>
-                    ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">Total de reservas confirmadas</p>
+            </CardContent>
+          </Card>
         </div>
 
-        <DialogFooter>
+        <div className="mb-4">
+          <h3 className="text-lg font-medium mb-2">Comodidades</h3>
+          <div className="flex flex-wrap gap-2">
+            {cabin.amenities.map((amenity: string, index: number) => (
+              <Badge key={index} variant="outline">
+                {amenity}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <Tabs defaultValue="upcoming" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="upcoming">Próximas Reservas</TabsTrigger>
+            <TabsTrigger value="past">Reservas Pasadas</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upcoming">
+            <div className="rounded-md border">
+              <table className="w-full caption-bottom text-sm">
+                <thead className="border-b bg-muted/50">
+                  <tr>
+                    <th className="h-10 px-4 text-left font-medium">Huésped</th>
+                    <th className="h-10 px-4 text-left font-medium">Check-in</th>
+                    <th className="h-10 px-4 text-left font-medium">Check-out</th>
+                    <th className="h-10 px-4 text-left font-medium">Estado</th>
+                    <th className="h-10 px-4 text-left font-medium">Precio</th>
+                    <th className="h-10 px-4 text-left font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedReservations
+                    .filter((r) => new Date(r.checkIn) >= new Date())
+                    .map((reservation) => (
+                      <tr key={reservation.id} className="border-b transition-colors hover:bg-muted/50">
+                        <td className="p-4 align-middle font-medium">{reservation.guest}</td>
+                        <td className="p-4 align-middle">{formatDate(reservation.checkIn)}</td>
+                        <td className="p-4 align-middle">{formatDate(reservation.checkOut)}</td>
+                        <td className="p-4 align-middle">
+                          <Badge
+                            variant={reservation.status === "confirmada" ? "default" : "secondary"}
+                            className={
+                              reservation.status === "confirmada" ? "bg-green-500" : "bg-yellow-500 text-black"
+                            }
+                          >
+                            {reservation.status === "confirmada" ? "Confirmada" : "Pendiente"}
+                          </Badge>
+                        </td>
+                        <td className="p-4 align-middle">${reservation.pricePerNight.toLocaleString()}/noche</td>
+                        <td className="p-4 align-middle">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onViewReservationDetails && onViewReservationDetails(reservation)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  {sortedReservations.filter((r) => new Date(r.checkIn) >= new Date()).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                        No hay reservas próximas para esta cabaña
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="past">
+            <div className="rounded-md border">
+              <table className="w-full caption-bottom text-sm">
+                <thead className="border-b bg-muted/50">
+                  <tr>
+                    <th className="h-10 px-4 text-left font-medium">Huésped</th>
+                    <th className="h-10 px-4 text-left font-medium">Check-in</th>
+                    <th className="h-10 px-4 text-left font-medium">Check-out</th>
+                    <th className="h-10 px-4 text-left font-medium">Estado</th>
+                    <th className="h-10 px-4 text-left font-medium">Precio</th>
+                    <th className="h-10 px-4 text-left font-medium">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedReservations
+                    .filter((r) => new Date(r.checkIn) < new Date())
+                    .map((reservation) => (
+                      <tr key={reservation.id} className="border-b transition-colors hover:bg-muted/50">
+                        <td className="p-4 align-middle font-medium">{reservation.guest}</td>
+                        <td className="p-4 align-middle">{formatDate(reservation.checkIn)}</td>
+                        <td className="p-4 align-middle">{formatDate(reservation.checkOut)}</td>
+                        <td className="p-4 align-middle">
+                          <Badge
+                            variant={reservation.status === "confirmada" ? "default" : "secondary"}
+                            className={
+                              reservation.status === "confirmada" ? "bg-green-500" : "bg-yellow-500 text-black"
+                            }
+                          >
+                            {reservation.status === "confirmada" ? "Confirmada" : "Pendiente"}
+                          </Badge>
+                        </td>
+                        <td className="p-4 align-middle">${reservation.pricePerNight.toLocaleString()}/noche</td>
+                        <td className="p-4 align-middle">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onViewReservationDetails && onViewReservationDetails(reservation)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  {sortedReservations.filter((r) => new Date(r.checkIn) < new Date()).length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                        No hay reservas pasadas para esta cabaña
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex justify-end mt-4">
           <Button variant="outline" onClick={onClose}>
             Cerrar
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   )
